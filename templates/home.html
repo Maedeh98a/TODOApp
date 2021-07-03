@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+
+<!--<html xmlns:v-on="http://www.w3.org/1999/xhtml">-->
+<!--<head xmlns:v-bind="http://www.w3.org/1999/xhtml">-->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>TODO App</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.2/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" crossorigin="anonymous">
+<!--    <link rel="shortcut icon" type="image/png" href="/static/favicon.png"/>-->
+<!--<link rel="shortcut icon" href="#">-->
+<!-- <link rel="shortcut icon" href="favicon.ico">-->
+<link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-resource@1.3.4"></script>
+    <script src="https://unpkg.com/vue"></script>
+
+</head>
+
+<body>
+
+  <div class="home" id="app">
+
+
+    <div class="columns">
+      <div class="column is-3 is-offset-3">
+        <form v-on:submit.prevent="addTask">
+            {% csrf_token %}
+          <h2 class="subtitle">Add task</h2>
+
+             <div class="field">
+            <label class="label">title</label>
+            <div class="control">
+              <input class="input" type="text" v-model="title">
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label">Description</label>
+            <div class="control">
+              <input class="input" type="text" v-model="description">
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label">Status</label>
+            <div class="control">
+              <div class="select">
+                <select v-model="work_status">
+                  <option value="todo">To do</option>
+                  <option value="done">Done</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="control">
+              <button class="button is-link" @click="addTask()">Confirm</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="columns">
+      <div class="column is-6">
+        <h2 class="subtitle">To do</h2>
+
+        <div class="todo">
+          <div class="card" v-for="task in tasks" :key="task.id" v-if="task.work_status === 'todo'" >
+            <div class="card-content">title : {{task}}</div>
+<!--            <div class="card-content">{{ task.description }}</div>-->
+
+            <footer class="card-footer">
+              <a class="card-footer-item" @click="setStatus(task.id, 'done')">Done</a>
+            </footer>
+          </div>
+        </div>
+      </div>
+      <div class="column is-6">
+        <h2 class="subtitle">Done</h2>
+
+        <div class="done">
+          <div class="card" v-for="task in tasks" v-if="task.work_status === 'done'" v-bind:key="task.id">
+            <div class="card-content">{{ task.title }}</div>
+
+            <footer class="card-footer">
+              <a class="card-footer-item" @click="setStatus(task.id, 'todo')">To do</a>
+            </footer>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+<script>
+const API_URL = 'http://localhost:8000/api/tasks';
+var csrf = document.getElementsByName('csrfmiddlewaretoken')[0].value;
+console.log(csrf);
+
+new Vue({
+ el: '#app',
+  data () {
+    return {
+      tasks: [],
+      title: '',
+      description: '',
+      work_status: ''
+
+    }
+  },
+  mounted () {
+    this.getTasks()
+  },
+  methods: {
+
+    getTasks() {
+      axios({
+        method: 'get',
+        url: API_URL + '/' ,
+
+      }).then(response => this.tasks = response.data)
+    },
+    addTask() {
+      if (this.title) {
+        axios({
+          method: 'post',
+          url: API_URL + '/' + 'create' + '/' ,
+          data: {
+            title : this.title,
+            description: this.description,
+            work_status: this.work_status
+          },
+
+        }).then((response) => {
+          let newTask = {
+            'id': response.data.id,
+            'title': this.title,
+            'description': this.description,
+            'work_status': this.work_status
+          }
+          this.tasks.push(newTask)
+          this.title = ''
+          this.description = ''
+          this.work_status = 'todo'
+        }).catch((error) => {
+          console.log(error)
+        })
+      }
+    },
+    setStatus(task_id, work_status) {
+      const task = this.tasks.filter(task => task.id === task_id)[0]
+      const description = task.description
+      axios({
+        method: 'put',
+        url: API_URL + '/' + 'list' + '/' + task_id + '/',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        data: {
+          work_status: work_status,
+          description: description
+        },
+
+      }).then(() => {
+        task.work_status = work_status
+      })
+    }
+
+}
+        })
+
+</script>
+
+<style lang="scss">
+.select, select {
+  width: 100%;
+}
+.card {
+  margin-bottom: 20px;
+}
+.done {
+  opacity: 0.3;
+}
+</style>
+</body>
+</html>
